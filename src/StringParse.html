@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr" version="-//W3C//DTD HTML 4.01 Transitional//EN">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>String Parse</title>
+<script type="text/javascript">
+<!--
+/**
+ * 
+ * 调换两个元素的位置
+ * 
+ * 
+ * <b>Example:</b>
+ * <pre>
+ * 		in		parser.exchange('{"A","B" "C","D" "E","F" "J","K"}');
+ * 		out		{"C","A" "D","C" "F","E" "K","J"} 	
+ * </pre>
+ * 
+ * @ti 2012/04/20 12:34:29 GMT + 08:00
+ * 
+ */
+var parser = window.parser || {
+	/**
+	 * 用于转义的反斜线
+	 * 
+	 * @type {String}
+	 */
+	BACKLASH 		: '\\'
+	,
+	/**
+	 * 
+	 * 
+	 * @type {String}
+	 */
+	DOUBLE_QUOT		: '"'
+	,
+	/**
+	 * @type {String}
+	 */
+	SINGLE_QUOT		: "'"
+	,
+	/**
+	 * 用于 Pair 的间隔符
+	 * 
+	 * @type {String}
+	 */
+	PAIR_SEPARATOR 	: ','
+	,
+	/**
+	 * 用于 Token 的间隔符
+	 * @type {String}
+	 */
+	TOKEN_SEPARATOR : ' '
+	,
+	/**
+	 * Exchange
+	 * 
+	 * @param {String} input
+	 */
+	exchange : function(input) {		
+		try {
+			return this._process(input);		
+		} catch ( error ) {
+			debug.log(error);
+			
+			throw error;
+			
+			alert('数据不符合规范: ' + input + ' Error: ' + error);
+		} finally {
+						
+		}
+	}
+	,	
+	_process : function(input) {
+		// 用于统计执行时间
+		var begin = new Date().getTime();
+		
+		// 
+		var output = [];		
+
+		input = input || '{"A","B" "C","D" "E","F" "J","K" "A","B" "C","D" "E","F" "J","K" "A","B" "C","D" "E","F" "J","K" "A","B" "C","D" "E","F" "J","K" "A","B" "C","D"}';
+		
+		// Raw Data
+		var raw = this.extract(input);	
+		// var raw = this.encode( this.extract(input) );	
+		
+		console.log(raw);
+		
+		
+		var pair;
+		
+		var pairArray = this.strSplit(raw, this.TOKEN_SEPARATOR);
+		
+		var index;
+			
+		for ( index in pairArray ) 
+		{
+			debug.log(pairArray[index]);
+			
+			pair = this.strSplit(pairArray[index], this.PAIR_SEPARATOR);
+			
+			// 调换 Pair 元素的位置，并重组
+			output.push(pair[1], this.PAIR_SEPARATOR, pair[0]);
+			
+			// 添加 Token 分隔符
+			if ( pairArray.length - 1 != index ) output.push(this.TOKEN_SEPARATOR);
+			
+			debug.log(pair);
+			
+			debug.log(pair[0] + "<>" + pair[1]);		
+		}
+		
+		debug.log( output.join('') );
+		debug.log( this.enwrap( output.join('') ) );
+		
+		var result = this.enwrap( output.join('') );
+				
+		//alert(result);	
+		debug.log('Consumed: ' + (new Date().getTime() - begin) + ' ms');
+		
+		return result;
+	}
+	,
+	/**
+	 * 分别在两端添加 "{" 与 "}" 字符
+	 * 
+	 * @param {String} input
+	 * 
+	 * @return {String}
+	 */
+	enwrap : function(input) {
+		var sequence = [];
+			sequence.push('{', input, '}');
+			
+		return sequence.join('');
+		
+	}
+	,
+	/**
+	 * 将一个字串按指定分隔符拆分为数组
+	 * 
+	 * @param {String} src
+	 * @param {String} separator
+	 * 
+	 * @return {Array.<String>}
+	 */
+	strSplit : function(src, separator) {
+				
+		var result = [];
+		
+		if ( ! src || ! separator ) return result;
+	
+		var src 		= '' + src;	
+		var separator 	= '' + separator;	
+		
+		
+		// index start 标识着一个 Token 被分割出来位置信息
+		var index = 0;
+		
+		var separatorLength = separator.length;
+		
+		var start = src.indexOf(separator, index);
+		
+		var token;
+		
+		while ( -1 < start ) {
+			token = src.substring(index, start);	
+			
+			result.push(token);		
+			
+			index = start + separatorLength;
+			
+			start = src.indexOf(separator, index);
+		}
+		
+		// 这一步不能忘记（截取剩下的字串）
+		result.push( src.substring(index, src.length) );		
+		
+		return result;
+	}
+	,
+	/**
+	 * 对字串做一些编码操作（如：转义）
+	 * 
+	 * @param {String} src
+	 * 
+	 * @return {String}
+	 */
+	encode : function(src) {
+		return this.addBacklash(src);
+	}
+	,
+
+
+	/**
+	 * 添加转义斜线（反斜线）
+	 * 
+	 * @param {String} src
+	 * 
+	 * @return {String}
+	 */
+	addBacklash : function(src) {
+		var result = [];
+		var chr;
+		var index;
+		for ( index in src ) {
+			chr = src.charAt(index);
+			
+			if ( this.DOUBLE_QUOT == chr || this.SINGLE_QUOT == chr ) {
+				result.push(BACKLASH);			
+			}
+			
+			result.push(chr);			
+			
+			debug.log(chr);
+		}
+		
+		return result.join("");
+	}
+	,
+
+	/**
+	 * 移出左右两端的字符
+	 * 
+	 * @param {Object} src
+	 * 
+	 * @return {String}
+	 */
+	extract : function(src) {
+		return src.substring(1, src.length - 1);	
+	}	
+};
+
+var _supportedConsole = ! ( "undefined" === typeof( console ) );
+
+/** 
+ * Debugger tools(Actually that is the Browser internal Console, if your 
+ * Browser has supported.)
+ */
+var debug = debug || {		
+	enable: 1,
+	
+	info: ! _supportedConsole ? function() {} : function( o ) {
+		this.enable && console.info( o );
+	},
+	
+	log: ! _supportedConsole ? function() { alert("")} : function( o ) {
+		this.enable && console.log( o );
+	},
+	
+	error: ! _supportedConsole ? function() {} : function( o ) {
+		try { this.enable && console.error( o ); 
+		} catch( e ) { debug.log( o ); 
+		} finally {}
+	},
+	
+	dir: ! _supportedConsole ? function() {} : function( o ) {
+		this.enable && console.dir( o );
+	} 		
+};
+
+/**--------------------------------------------------------------------
+ *
+ *                            Main
+ *
+ *--------------------------------------------------------------------*/
+window.onload = function() {
+	// 启用 Logger 功能
+	debug.enable = ! 0;
+		
+	document.getElementById('displayer').innerHTML = parser.exchange();
+};
+//-->
+</script>
+</head>
+<body>
+<div id="displayer"></div>
+</body>
+</html>
